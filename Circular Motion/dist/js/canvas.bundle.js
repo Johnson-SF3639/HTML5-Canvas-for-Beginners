@@ -103,10 +103,10 @@ var c = canvas.getContext('2d');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 var mouse = {
-  x: undefined,
-  y: undefined
+  x: innerWidth / 2,
+  y: innerHeight / 2
 };
-var colors = ['#2185C5', '#333', '#0f9f0f', '#9f0f9f', '#FF7F66']; // Event Listeners
+var colors = ['#2185C5', '#7ECEFD', '#FFF6E5', '#FF7F66']; // Event Listeners
 
 addEventListener('mousemove', function (event) {
   mouse.x = event.clientX;
@@ -116,51 +116,7 @@ addEventListener('resize', function () {
   canvas.width = innerWidth;
   canvas.height = innerHeight;
   init();
-});
-
-function rotate(velocity, angle) {
-  var rotatedVelocities = {
-    x: velocity.x * Math.cos(angle) - velocity.y * Math.sin(angle),
-    y: velocity.x * Math.sin(angle) + velocity.y * Math.cos(angle)
-  };
-  return rotatedVelocities;
-}
-
-function resolveCollision(particle, otherParticle) {
-  var xVelocityDiff = particle.velocity.x - otherParticle.velocity.x;
-  var yVelocityDiff = particle.velocity.y - otherParticle.velocity.y;
-  var xDist = otherParticle.x - particle.x;
-  var yDist = otherParticle.y - particle.y; // Prevent accidental overlap of particles
-
-  if (xVelocityDiff * xDist + yVelocityDiff * yDist >= 0) {
-    // Grab angle between the two colliding particles
-    var angle = -Math.atan2(otherParticle.y - particle.y, otherParticle.x - particle.x); // Store mass in var for better readability in collision equation
-
-    var m1 = particle.mass;
-    var m2 = otherParticle.mass; // Velocity before equation
-
-    var u1 = rotate(particle.velocity, angle);
-    var u2 = rotate(otherParticle.velocity, angle); // Velocity after 1d collision equation
-
-    var v1 = {
-      x: u1.x * (m1 - m2) / (m1 + m2) + u2.x * 2 * m2 / (m1 + m2),
-      y: u1.y
-    };
-    var v2 = {
-      x: u2.x * (m1 - m2) / (m1 + m2) + u1.x * 2 * m2 / (m1 + m2),
-      y: u2.y
-    }; // Final velocity after rotating axis back to original location
-
-    var vFinal1 = rotate(v1, -angle);
-    var vFinal2 = rotate(v2, -angle); // Swap particle velocities for realistic bounce effect
-
-    particle.velocity.x = vFinal1.x;
-    particle.velocity.y = vFinal1.y;
-    otherParticle.velocity.x = vFinal2.x;
-    otherParticle.velocity.y = vFinal2.y;
-  }
-} // Objects
-
+}); // Objects
 
 function Particle(x, y, radius, color) {
   var _this = this;
@@ -169,91 +125,60 @@ function Particle(x, y, radius, color) {
   this.y = y;
   this.radius = radius;
   this.color = color;
-  this.mass = 1;
-  this.opacity = 0;
-  this.velocity = {
-    x: (Math.random() - 0.5) * 5,
-    y: (Math.random() - 0.5) * 5
+  this.radians = Math.random() * Math.PI * 2;
+  this.velocity = 0.05;
+  this.distanceFromCenter = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomIntFromRange"])(50, 120);
+  this.lastMouse = {
+    x: x,
+    y: y
   };
 
-  this.draw = function () {
+  this.update = function () {
+    var lastPoint = {
+      x: _this.x,
+      y: _this.y
+    };
+    _this.lastMouse.x += (mouse.x - _this.lastMouse.x) * 0.05;
+    _this.lastMouse.y += (mouse.y - _this.lastMouse.y) * 0.05;
+    _this.radians += _this.velocity;
+    _this.x = _this.lastMouse.x + Math.cos(_this.radians) * _this.distanceFromCenter;
+    _this.y = _this.lastMouse.y + Math.sin(_this.radians) * _this.distanceFromCenter;
+
+    _this.draw(lastPoint);
+  };
+
+  this.draw = function (lastPoint) {
     c.beginPath();
-    c.arc(_this.x, _this.y, _this.radius, 0, Math.PI * 2, false);
-    c.save();
-    c.globalAlpha = _this.opacity;
-    c.fillStyle = _this.color;
-    c.fill();
-    c.restore();
     c.strokeStyle = _this.color;
+    c.lineWidth = _this.radius;
+    c.moveTo(lastPoint.x, lastPoint.y);
+    c.lineTo(_this.x, _this.y);
     c.stroke();
     c.closePath();
-  };
-
-  this.update = function (particles) {
-    _this.draw();
-
-    for (var i = 0; i < particles.length; i++) {
-      if (_this === particles[i]) {
-        continue;
-      }
-
-      if (Object(_utils__WEBPACK_IMPORTED_MODULE_0__["distance"])(_this.x, _this.y, particles[i].x, particles[i].y) - _this.radius * 2 < 0) {
-        resolveCollision(_this, particles[i]);
-      }
-    }
-
-    if (_this.x - _this.radius <= 0 || _this.x + _this.radius >= innerWidth) {
-      _this.velocity.x = -_this.velocity.x;
-    }
-
-    if (_this.y - _this.radius <= 0 || _this.y + _this.radius >= innerHeight) {
-      _this.velocity.y = -_this.velocity.y;
-    }
-
-    if (Object(_utils__WEBPACK_IMPORTED_MODULE_0__["distance"])(mouse.x, mouse.y, _this.x, _this.y) < 120 && _this.opacity < 0.2) {
-      _this.opacity += 0.02;
-    } else if (_this.opacity > 0) {
-      _this.opacity -= 0.02;
-      _this.opacity = Math.max(0, _this.opacity);
-    }
-
-    _this.x += _this.velocity.x;
-    _this.y += _this.velocity.y;
   };
 } // Implementation
 
 
-var particles, x, y, color;
+var particles;
 
 function init() {
   particles = [];
 
   for (var i = 0; i < 100; i++) {
-    var radius = 15;
-    x = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomIntFromRange"])(radius, canvas.width - radius);
-    y = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomIntFromRange"])(radius, canvas.height - radius);
-    color = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomColor"])(colors);
-
-    if (i !== 0) {
-      for (var j = 0; j < particles.length; j++) {
-        if (Object(_utils__WEBPACK_IMPORTED_MODULE_0__["distance"])(x, y, particles[j].x, particles[j].y) - radius * 2 < 0) {
-          x = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomIntFromRange"])(radius, canvas.width - radius);
-          y = Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomIntFromRange"])(radius, canvas.height - radius);
-          j = -1;
-        }
-      }
-    }
-
-    particles.push(new Particle(x, y, radius, color));
+    var radius = Math.random() * 2 + 1;
+    particles.push(new Particle(innerWidth / 2, innerHeight / 2, radius, Object(_utils__WEBPACK_IMPORTED_MODULE_0__["randomColor"])(colors)));
   }
+
+  console.log(particles);
 } // Animation Loop
 
 
 function animate() {
   requestAnimationFrame(animate);
-  c.clearRect(0, 0, canvas.width, canvas.height);
+  c.fillStyle = 'rgba(255,255,255,0.05)';
+  c.fillRect(0, 0, canvas.width, canvas.height);
   particles.forEach(function (particle) {
-    particle.update(particles);
+    particle.update();
   });
 }
 
