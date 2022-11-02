@@ -1,9 +1,10 @@
 var canvas = document.querySelector('canvas');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
 
 var canvasDraw = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 var mouse ={
     x : undefined,
@@ -16,7 +17,16 @@ window.addEventListener('mousemove',
     function(event){
         mouse.x=event.x;
         mouse.y = event.y;
-    });
+    }
+);
+
+window.addEventListener('resize',
+    function(){
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        init();
+    }
+);
 
 var colorArray=["red","blue","green","yellow","white","black","pink","lightblue"];
 
@@ -64,13 +74,17 @@ function Circle(x,y,dx,dy,radius){
 
 var circleArray =[];
 
-for(var i=0; i<1000; i++){
-    var x=Math.random()*(innerWidth - radius*2) + radius;
-    var dx= (Math.random()-0.5);
-    var y=Math.random()*(innerHeight - radius*2) + radius;
-    var dy=(Math.random()-0.5);
-    var radius=(Math.random()*3 +1);
-    circleArray.push(new Circle(x,y,dx,dy,radius));
+
+function init(){
+    circleArray= [];
+    for(var i=0; i<1000; i++){
+        var x=Math.random()*(innerWidth - radius*2) + radius;
+        var dx= (Math.random()-0.5);
+        var y=Math.random()*(innerHeight - radius*2) + radius;
+        var dy=(Math.random()-0.5);
+        var radius=(Math.random()*3 +1);
+        circleArray.push(new Circle(x,y,dx,dy,radius));
+    }
 }
 
 
@@ -81,3 +95,6 @@ function animate(){
         circleArray[i].update();
     }
 }
+
+init();
+animate();
